@@ -2,57 +2,87 @@
 title: 'Task 1: Principal Component Analysis'
 author: "Nick McManus"
 date: "2023-02-27"
-output: html_document
+output:
+  rmdformats::downcute:
+    code_folding: show
+    self_contained: true
+    thumbnails: false
+    lightbox: true
 ---
 
 ```{r setup, include=TRUE, message = FALSE, warning = FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
-library(tidyverse)
-library(ggfortify) # For PCA biplot
+
+library(tidyverse) ## always
+library(ggfortify) ## For PCA biplot
 ```
+
+# Introduction:
+
+In this task, we explore patterns within a multivariate food nutrition dataset using a principal component analysis (PCA). Nutrition data comes from the United States Department of Agriulture (USDA) and is organized into 25 food group categories, such as snacks, baby foods, and beef products. Variables for each food product include macronutrients (i.e. fats, protein, carbohydrates) and micronutrients (i.e. vitamins and minerals). Looking at the concentration of vitamins and minerals in raw vegetables and fruits. 
+
+**Source:** https://fdc.nal.usda.gov/index.html
 
 
 # Read in and wrangle data:
+
+The raw USDA nutrient data will be wrangled to return only information on the vitamins and minerals concentrations for raw fruits and vegetables.
 ```{r}
 ### read in data
 usda <- read_csv('usda_nutrients.csv') %>% 
   janitor::clean_names() 
 
 ### explore the food group categories (type and number)
-# unique(usda$food_group)
-usda_types <- usda %>% 
-  group_by(food_group) %>% 
-  summarize(count = n())
+unique(usda$food_group)
 
-### keep only raw veggies and fruits (no juice) and info on vitamins and minerals
-### remove variables representing USRDA
-veggies <- usda %>% 
-  filter(food_group %in% c("Vegetables and Vegetable Products", "Fruits and Fruit Juices"),
+# usda_types <- usda %>% 
+#   group_by(food_group) %>% 
+#   summarize(count = n())
+```
+
+```{r}
+### create subset w/only raw veggies and fruits (no juice) 
+### and info on vitamins and minerals
+fruit_veg <- usda %>% 
+  ## only keep fruits and veggies
+  filter(food_group %in% c("Vegetables and Vegetable Products",
+                           "Fruits and Fruit Juices"),
+         ## only keep raw, whole foods (no juice)
          str_detect(descrip, "raw"),
          !str_detect(descrip, "juice")) %>% 
+  ## remove macronutrients and RDA ratios
   select(!ends_with(c("usrda", "_g", "_kcal"))) %>% 
-  mutate(food_group = factor(food_group, levels = c('Vegetables and Vegetable Products', 'Fruits and Fruit Juices')))
+  ## make food groups factors for later biplot
+  mutate(food_group = factor(food_group, 
+                             levels = c('Vegetables and Vegetable Products', 
+                                        'Fruits and Fruit Juices')))
 ```
+
+
 
 # Run PCA
+
 ``` {r}
-### run PCA
-veggies_pca <- veggies %>%
+### Create subset with only numeric values, then run PCA.
+### Different units, so scale variables
+fruit_veg_pca <- fruit_veg %>%
   select(where(is.numeric)) %>% 
-  ## different units, so scale variables
   prcomp(scale = TRUE) 
 
-### See the loadings (weighting for each principal component)
-veggies_pca$rotation
 
-### summaries
-summary(veggies_pca)
+### See the loadings and summary info
+# veggies_pca$rotation
+# summary(veggies_pca)
 ```
 
-# Biplot
+
+
+# Visualize PCA
+
+Create a biplot to look at PCA results in two-dimensions.
 ```{r}
-autoplot(veggies_pca,
-     	data = veggies,
+autoplot(fruit_veg_pca,
+     	data = fruit_veg,
      	loadings = TRUE,
      	colour = 'food_group',
      	loadings.label = TRUE,
@@ -64,4 +94,4 @@ autoplot(veggies_pca,
   # scale_fill_manual(values = c('red', 'orange', 'yellowgreen', 'darkgreen')) +
   theme_minimal()
 ```
-
+**Figure 1.** Caption here. 
