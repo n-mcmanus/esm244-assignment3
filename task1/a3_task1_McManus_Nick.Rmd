@@ -1,0 +1,13 @@
+---
+title: 'Task 1: Principal Component Analysis'
+author: "Nick McManus"
+date: "2023-02-27"
+output: html_document
+---
+
+```{r setup, include=TRUE, message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+library(tidyverse)
+
+```
+
