@@ -21,6 +21,9 @@ library(ggfortify) ## For PCA biplot
 
 In this task, we explore patterns within a multivariate food nutrition dataset using a principal component analysis (PCA). Nutrition data comes from the United States Department of Agriulture (USDA) and is organized into 25 food group categories, such as snacks, baby foods, and beef products. Variables for each food product include macronutrients (i.e. fats, protein, carbohydrates) and micronutrients (i.e. vitamins and minerals). Looking at the concentration of vitamins and minerals in raw vegetables and fruits. 
 
+
+Look at how they compare against snacks? 
+
 **Source:** https://fdc.nal.usda.gov/index.html
 
 
@@ -35,15 +38,23 @@ usda <- read_csv('usda_nutrients.csv') %>%
 ### explore the food group categories (type and number)
 unique(usda$food_group)
 
-# usda_types <- usda %>% 
-#   group_by(food_group) %>% 
-#   summarize(count = n())
+usda_types <- usda %>%
+  group_by(food_group) %>%
+  summarize(count = n())
+
+nuts <- usda %>% 
+  filter(food_group == "Nut and Seed Products",
+         str_detect(descrip, 'raw'))
+
+snacks <- usda %>% 
+  filter(food_group == "Snacks")
+  
 ```
 
 ```{r}
 ### create subset w/only raw veggies and fruits (no juice) 
 ### and info on vitamins and minerals
-fruit_veg <- usda %>% 
+fruit_veg_micro <- usda %>% 
   ## only keep fruits and veggies
   filter(food_group %in% c("Vegetables and Vegetable Products",
                            "Fruits and Fruit Juices"),
@@ -55,7 +66,87 @@ fruit_veg <- usda %>%
   ## make food groups factors for later biplot
   mutate(food_group = factor(food_group, 
                              levels = c('Vegetables and Vegetable Products', 
+                                        'Fruits and Fruit Juices'))) 
+
+fruit_veg_macro <- usda %>% 
+  ## only keep fruits and veggies
+  filter(food_group %in% c("Vegetables and Vegetable Products",
+                           "Fruits and Fruit Juices"),
+         ## only keep raw, whole foods (no juice)
+         str_detect(descrip, "raw"),
+         !str_detect(descrip, "juice")) %>% 
+  ## remove macronutrients and RDA ratios
+  select(food_group, energy_kcal:fiber_g) %>%
+  ## make food groups factors for later biplot
+  mutate(food_group = factor(food_group, 
+                             levels = c('Vegetables and Vegetable Products', 
                                         'Fruits and Fruit Juices')))
+
+fruit_veg_all <- usda %>% 
+  ## only keep fruits and veggies
+  filter(food_group %in% c("Vegetables and Vegetable Products",
+                           "Fruits and Fruit Juices"),
+         ## only keep raw, whole foods (no juice)
+         str_detect(descrip, "raw"),
+         !str_detect(descrip, "juice")) %>% 
+  ## remove macronutrients and RDA ratios
+  select(!ends_with(c("usrda"))) %>%
+  ## make food groups factors for later biplot
+  mutate(food_group = factor(food_group, 
+                             levels = c('Vegetables and Vegetable Products', 
+                                        'Fruits and Fruit Juices')))
+
+
+fruit_veg_nut_all <- usda %>% 
+  ## only keep fruits and veggies
+  filter(food_group %in% c("Vegetables and Vegetable Products",
+                           "Fruits and Fruit Juices",
+                           "Nut and Seed Products"),
+         ## only keep raw, whole foods (no juice)
+         str_detect(descrip, "raw"),
+         !str_detect(descrip, "juice")) %>% 
+  ## remove macronutrients and RDA ratios
+  select(!ends_with(c("usrda"))) %>%
+  ## make food groups factors for later biplot
+  mutate(food_group = factor(food_group, 
+                             levels = c('Vegetables and Vegetable Products', 
+                                        'Fruits and Fruit Juices',
+                                        'Nut and Seed Products'))) 
+
+
+
+
+fruit_veg_nut_micro <- usda %>% 
+  ## only keep fruits and veggies
+  filter(food_group %in% c("Vegetables and Vegetable Products",
+                           "Fruits and Fruit Juices",
+                           "Nut and Seed Products"),
+         ## only keep raw, whole foods (no juice)
+         str_detect(descrip, "raw"),
+         !str_detect(descrip, "juice")) %>% 
+  ## remove macronutrients and RDA ratios
+  select(!ends_with(c("usrda", "_g", "_kcal"))) %>% 
+  ## make food groups factors for later biplot
+  mutate(food_group = factor(food_group, 
+                             levels = c('Vegetables and Vegetable Products', 
+                                        'Fruits and Fruit Juices',
+                                        'Nut and Seed Products'))) 
+
+fruit_veg_nut_macro <- usda %>% 
+  ## only keep fruits and veggies
+  filter(food_group %in% c("Vegetables and Vegetable Products",
+                           "Fruits and Fruit Juices",
+                           "Nut and Seed Products"),
+         ## only keep raw, whole foods (no juice)
+         str_detect(descrip, "raw"),
+         !str_detect(descrip, "juice")) %>% 
+  ## remove macronutrients and RDA ratios
+  select(food_group, energy_kcal:fiber_g) %>%
+  ## make food groups factors for later biplot
+  mutate(food_group = factor(food_group, 
+                             levels = c('Vegetables and Vegetable Products', 
+                                        'Fruits and Fruit Juices',
+                                        'Nut and Seed Products')))
 ```
 
 
@@ -65,11 +156,35 @@ fruit_veg <- usda %>%
 ``` {r}
 ### Create subset with only numeric values, then run PCA.
 ### Different units, so scale variables
-fruit_veg_pca <- fruit_veg %>%
+fruit_veg_micro_pca <- fruit_veg_micro %>%
   select(where(is.numeric)) %>% 
   prcomp(scale = TRUE) 
 
+fruit_veg_macro_pca <- fruit_veg_macro %>%
+  select(where(is.numeric)) %>% 
+  prcomp(scale = TRUE) 
 
+fruit_veg_all_pca <- fruit_veg_all %>%
+  select(where(is.numeric)) %>% 
+  prcomp(scale = TRUE)
+
+fruit_veg_nut_all_pca <- fruit_veg_nut_all %>%
+  select(where(is.numeric)) %>% 
+  prcomp(scale = TRUE)
+
+
+
+
+
+fruit_veg_nut_pca <- fruit_veg_nut %>%
+  select(where(is.numeric)) %>% 
+  prcomp(scale = TRUE)
+
+fruit_veg_nut_macro_pca <- fruit_veg_nut_macro %>%
+  select(where(is.numeric)) %>% 
+  prcomp(scale = TRUE) 
+
+summary(fruit_veg_nut_pca)
 ### See the loadings and summary info
 # veggies_pca$rotation
 # summary(veggies_pca)
@@ -81,8 +196,8 @@ fruit_veg_pca <- fruit_veg %>%
 
 Create a biplot to look at PCA results in two-dimensions.
 ```{r}
-autoplot(fruit_veg_pca,
-     	data = fruit_veg,
+autoplot(fruit_veg_macro_pca,
+     	data = fruit_veg_macro,
      	loadings = TRUE,
      	colour = 'food_group',
      	loadings.label = TRUE,
@@ -92,6 +207,39 @@ autoplot(fruit_veg_pca,
      	) +
   # scale_color_manual(values = c('red', 'orange', 'yellowgreen', 'darkgreen')) +
   # scale_fill_manual(values = c('red', 'orange', 'yellowgreen', 'darkgreen')) +
+  theme_minimal()
+
+autoplot(fruit_veg_micro_pca,
+     	data = fruit_veg_micro,
+     	loadings = TRUE,
+     	colour = 'food_group',
+     	loadings.label = TRUE,
+     	loadings.colour = "black",
+     	loadings.label.colour = "black",
+     	loadings.label.vjust = -0.5
+     	) +
+  theme_minimal()
+
+autoplot(fruit_veg_all_pca,
+     	data = fruit_veg_micro,
+     	loadings = TRUE,
+     	colour = 'food_group',
+     	loadings.label = TRUE,
+     	loadings.colour = "black",
+     	loadings.label.colour = "black",
+     	loadings.label.vjust = -0.5
+     	) +
+  theme_minimal()
+
+autoplot(fruit_veg_nut_all_pca,
+     	data = fruit_veg_nut_all,
+     	loadings = TRUE,
+     	colour = 'food_group',
+     	loadings.label = TRUE,
+     	loadings.colour = "black",
+     	loadings.label.colour = "black",
+     	loadings.label.vjust = -0.5
+     	) +
   theme_minimal()
 ```
 **Figure 1.** Caption here. 
