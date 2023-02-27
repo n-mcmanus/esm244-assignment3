@@ -16,7 +16,7 @@ library(ggfortify) # For PCA biplot
 ```{r}
 ### read in data
 usda <- read_csv('usda_nutrients.csv') %>% 
-  janitor::clean_names()
+  janitor::clean_names() 
 
 ### explore the food group categories (type and number)
 # unique(usda$food_group)
@@ -24,20 +24,21 @@ usda_types <- usda %>%
   group_by(food_group) %>% 
   summarize(count = n())
 
-### keep only raw veggies and info on vitamins and minerals
+### keep only raw veggies and fruits (no juice) and info on vitamins and minerals
 ### remove variables representing USRDA
 veggies <- usda %>% 
-  filter(food_group == "Vegetables and Vegetable Products",
-         str_detect(descrip, "raw")) %>% 
-  select(where(is.numeric),
-         !ends_with(c("usrda", "_g", "_kcal")))
-
+  filter(food_group %in% c("Vegetables and Vegetable Products", "Fruits and Fruit Juices"),
+         str_detect(descrip, "raw"),
+         !str_detect(descrip, "juice")) %>% 
+  select(!ends_with(c("usrda", "_g", "_kcal"))) %>% 
+  mutate(food_group = factor(food_group, levels = c('Vegetables and Vegetable Products', 'Fruits and Fruit Juices')))
 ```
 
 # Run PCA
 ``` {r}
 ### run PCA
 veggies_pca <- veggies %>%
+  select(where(is.numeric)) %>% 
   ## different units, so scale variables
   prcomp(scale = TRUE) 
 
@@ -50,6 +51,17 @@ summary(veggies_pca)
 
 # Biplot
 ```{r}
-
+autoplot(veggies_pca,
+     	data = veggies,
+     	loadings = TRUE,
+     	colour = 'food_group',
+     	loadings.label = TRUE,
+     	loadings.colour = "black",
+     	loadings.label.colour = "black",
+     	loadings.label.vjust = -0.5
+     	) +
+  # scale_color_manual(values = c('red', 'orange', 'yellowgreen', 'darkgreen')) +
+  # scale_fill_manual(values = c('red', 'orange', 'yellowgreen', 'darkgreen')) +
+  theme_minimal()
 ```
 
