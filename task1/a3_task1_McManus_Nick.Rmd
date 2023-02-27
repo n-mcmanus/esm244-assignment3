@@ -8,6 +8,48 @@ output: html_document
 ```{r setup, include=TRUE, message = FALSE, warning = FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 library(tidyverse)
+library(ggfortify) # For PCA biplot
+```
+
+
+# Read in and wrangle data:
+```{r}
+### read in data
+usda <- read_csv('usda_nutrients.csv') %>% 
+  janitor::clean_names()
+
+### explore the food group categories (type and number)
+# unique(usda$food_group)
+usda_types <- usda %>% 
+  group_by(food_group) %>% 
+  summarize(count = n())
+
+### keep only raw veggies and info on vitamins and minerals
+### remove variables representing USRDA
+veggies <- usda %>% 
+  filter(food_group == "Vegetables and Vegetable Products",
+         str_detect(descrip, "raw")) %>% 
+  select(where(is.numeric),
+         !ends_with(c("usrda", "_g", "_kcal")))
+
+```
+
+# Run PCA
+``` {r}
+### run PCA
+veggies_pca <- veggies %>%
+  ## different units, so scale variables
+  prcomp(scale = TRUE) 
+
+### See the loadings (weighting for each principal component)
+veggies_pca$rotation
+
+### summaries
+summary(veggies_pca)
+```
+
+# Biplot
+```{r}
 
 ```
 
