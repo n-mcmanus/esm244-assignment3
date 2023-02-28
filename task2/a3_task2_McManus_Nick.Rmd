@@ -7,7 +7,95 @@ output: html_document
 
 ```{r setup, include=TRUE, message = FALSE, warning = FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
-library(tidyverse)
+
+library(tidyverse)   ## always
+library(dendextend)  ## tanglegram to compare complete/single linkage
+library(ggdendro)    ## plotting dendrogram nicely
+```
+
+# Introduction
+
+bottom-up agglomerative clustering
+
+
+
+
+**Source:** Citation: Santa Barbara Coastal LTER and J. Melack. 2019. SBC LTER: Land: Stream chemistry in the Santa Barbara Coastal drainage area, ongoing since 2000 ver 16. Environmental Data Initiative. https://doi.org/10.6073/pasta/67a558a24ceed9a0a5bf5e46ab841174. 
+
+# Data wrangling
+
+* Should we find means before dropping NAs? Or drop NAs and then find the means for only complete observations? 
+
+First, read in the raw data and convert -999 values to NA. Then, To perform an hierarchical clustering by complete linkage, we'll need to wrangle the data to return only observations with data for every numeric variable. After dropping observations with NAs, the data will be scaled so that euclidean distances can easily be calculated.  
+
+```{r}
+### read in data
+stream_chem <- read_csv('sbc_lter_registered_stream_chemistry.csv') %>% 
+  ## convert -999 values to NA
+  na_if(-999) 
+
+### let's use this one for now and fix later
+stream_chem_avgs <- stream_chem %>% 
+  group_by(site_code) %>% 
+  summarize(nh4 = mean(nh4_uM, na.rm = TRUE),
+            no3 = mean(no3_uM, na.rm = TRUE),
+            po4 = mean(po4_uM, na.rm = TRUE),
+            tdn = mean(tdn_uM, na.rm = TRUE),
+            tpc = mean(tpc_uM, na.rm = TRUE),
+            tpn = mean(tpn_uM, na.rm = TRUE),
+            tpp = mean(tpp_uM, na.rm = TRUE),
+            tss = mean(tss_mgperLiter, na.rm = TRUE),
+            spec_cond = mean(spec_cond_uSpercm, na.rm = TRUE)) %>% 
+  drop_na()
+
+
+
+test <- stream_chem %>% 
+  drop_na() %>% 
+  group_by(site_code) %>% 
+  summarize(nh4 = mean(nh4_uM),
+            no3 = mean(no3_uM))
+
+
+### scale the data
+stream_chem_scale <- stream_chem_avgs %>% 
+  select(where(is.numeric)) %>% 
+  scale()
+
+### reassign rownames based on site
+rownames(stream_chem_scale) <- stream_chem_avgs$site_code
+```
+
+
+# Hierarchical clustering
+
+First calculate the Euclidean distance in multivariate space between the different observations. Then, use this matrix of distances (dissimilarity matrix) to perform a complete hierarchical clustering. The results are visualized by the dendrogram in Figure 1 below.
+```{r}
+### calculate euc dists
+euc_dist <- dist(stream_chem_scale, method = 'euclidean')
+
+### use stats::hclust() for hierarchical clustering
+stream_hc_complete <- hclust(euc_dist, method = 'complete')
+
+### quick base plot check:
+# plot(stream_hc_complete, cex = 0.6, hang = -1)
+```
+
+```{r}
+### dendrogram plot
+ggdendrogram(stream_hc_complete, 
+             rotate = FALSE) +
+  theme_minimal() +
+  labs(x = "Site")
 
 ```
+**Figure 1.** Dendrogram caption here.
+
+
+# Complete vs. Single Linkage
+
+Here I'll compare them with a tanglegram...
+
+
+
 
