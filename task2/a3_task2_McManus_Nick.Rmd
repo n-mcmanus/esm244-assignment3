@@ -24,40 +24,40 @@ bottom-up agglomerative clustering
 
 # Data wrangling
 
-* Should we find means before dropping NAs? Or drop NAs and then find the means for only complete observations? 
-
-First, read in the raw data and convert -999 values to NA. Then, To perform an hierarchical clustering by complete linkage, we'll need to wrangle the data to return only observations with data for every numeric variable. After dropping observations with NAs, the data will be scaled so that euclidean distances can easily be calculated.  
-
+First, we read in the raw data and wrangle it to later perform an hierarchical clustering by complete linkages. First, any variables with high (>50%) occurrence of NAs are removed. The remaining data then undergoes a listwise deletion to return only observations with data for every variable. The average stream chemistry values are calculated by site, and then the data is scaled to more easily calculate euclidean distances.
 ```{r}
 ### read in data
 stream_chem <- read_csv('sbc_lter_registered_stream_chemistry.csv') %>% 
   ## convert -999 values to NA
   na_if(-999) 
 
-### let's use this one for now and fix later
+
+### explore the number of NAs by variable
+# colSums(is.na(stream_chem))
+   # site_code   timestamp_local            nh4_uM            no3_uM 
+   #         0                 0               203               149 
+   #    po4_uM            tdn_uM            tdp_uM            tpc_uM 
+   #       167              5034              5801             16521 
+   #    tpn_uM            tpp_uM    tss_mgperLiter spec_cond_uSpercm 
+   #     16521             17046             14376               924 
+
+
+### tpc, tpn, tpp, and tss all have more than 50% NAs.
+### Let's drop them from the analysis,
+### then find the average values by stream site.
 stream_chem_avgs <- stream_chem %>% 
-  group_by(site_code) %>% 
-  summarize(nh4 = mean(nh4_uM, na.rm = TRUE),
-            no3 = mean(no3_uM, na.rm = TRUE),
-            po4 = mean(po4_uM, na.rm = TRUE),
-            tdn = mean(tdn_uM, na.rm = TRUE),
-            tpc = mean(tpc_uM, na.rm = TRUE),
-            tpn = mean(tpn_uM, na.rm = TRUE),
-            tpp = mean(tpp_uM, na.rm = TRUE),
-            tss = mean(tss_mgperLiter, na.rm = TRUE),
-            spec_cond = mean(spec_cond_uSpercm, na.rm = TRUE)) %>% 
-  drop_na()
-
-
-
-test <- stream_chem %>% 
+  select(!c(tpc_uM, tpn_uM, tpp_uM, tss_mgperLiter)) %>% 
   drop_na() %>% 
   group_by(site_code) %>% 
-  summarize(nh4 = mean(nh4_uM),
-            no3 = mean(no3_uM))
+  summarize(nh4_mean = mean(nh4_uM, na.rm = TRUE),
+            no3_mean = mean(no3_uM, na.rm = TRUE),
+            po4_mean = mean(po4_uM, na.rm = TRUE),
+            tdn_mean = mean(tdn_uM, na.rm = TRUE),
+            tdp_mean = mean(tdp_uM, na.rm = TRUE),
+            spec_cond_mean = mean(spec_cond_uSpercm, na.rm = TRUE))
 
 
-### scale the data
+### scale the numeric data
 stream_chem_scale <- stream_chem_avgs %>% 
   select(where(is.numeric)) %>% 
   scale()
