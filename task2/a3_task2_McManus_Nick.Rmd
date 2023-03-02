@@ -69,7 +69,7 @@ rownames(stream_chem_scale) <- stream_chem_avgs$site_code
 
 # Hierarchical clustering
 
-First calculate the Euclidean distance in multivariate space between the different observations. Then, use this matrix of distances (dissimilarity matrix) to perform a complete hierarchical clustering. The results are visualized by the dendrogram in Figure 1 below.
+For a bottom-up hierarchical cluster, we first need to calculate the Euclidean distance in multivariate space between the different observations. Then, we use this matrix of distances (dissimilarity matrix) to perform a complete hierarchical clustering. The results are visualized by the dendrogram in Figure 1 below.
 ```{r}
 ### calculate euc dists
 euc_dist <- dist(stream_chem_scale, method = 'euclidean')
@@ -82,7 +82,7 @@ stream_hc_complete <- hclust(euc_dist, method = 'complete')
 ```
 
 ```{r}
-### dendrogram plot
+### Dendrogram plot
 ggdendrogram(stream_hc_complete, 
              rotate = FALSE) +
   theme_minimal() +
@@ -94,8 +94,35 @@ ggdendrogram(stream_hc_complete,
 
 # Complete vs. Single Linkage
 
-Here I'll compare them with a tanglegram...
+Here we compare the hierarchical clustering results of complete vs. single linkages with a tanglegram. 
+```{r}
+### Single-linkage 
+stream_hc_single <- hclust(euc_dist, method= 'single')
 
+### Quick base plot check:
+# plot(hc_single, cex = 0.9, hang = -1)
+
+### Convert both HC's to dendrogram class
+dend_complete <- as.dendrogram(stream_hc_complete)
+dend_single <- as.dendrogram(stream_hc_single)
+
+### Make a tanglegram
+# tanglegram(dend_complete, dend_single)
+
+### How similar are they?
+# entanglement(dend_complete, dend_single)
+# [1] 0.2774816
+
+### Can we get the number lower (better) by untangling a bit?
+# untangle(dend_complete, dend_single, method = 'step1side') %>% 
+#   entanglement()
+# [1] 0.1690201
+
+### Plot the untangled tanglegram!
+tangle <- untangle(dend_complete, dend_single, method = 'step1side') %>% 
+  tanglegram(common_subtrees_color_branches = TRUE)
+```
+**Figure 2.** Ugly tangle gram with caption here. 
 
 
 
