@@ -15,12 +15,13 @@ library(ggdendro)    ## plotting dendrogram nicely
 
 # Introduction
 
-bottom-up agglomerative clustering
+In this task, we determine the relative similarity of various Santa Barbara stream sites through an agglomerative hierarchical clustering. This bottom-up approach starts with each stream sampling site as it's own cluster, then groups sites together based on their average chemical similarity. Measured chemical parameters include dissolved nitrogen, soluble reactive phosphorous, particulate organic carbon, total suspended solids, and specific conductivity. 
 
-
-
+This data comes from the Santa Barbara Coastal LTER, which collected water measurements from 2000 - 2018. The 13 sites are located in Santa Barbara area watersheds, stretching roughly from Gaviota State Park to downtown Santa Barbara. 
 
 **Source:** Citation: Santa Barbara Coastal LTER and J. Melack. 2019. SBC LTER: Land: Stream chemistry in the Santa Barbara Coastal drainage area, ongoing since 2000 ver 16. Environmental Data Initiative. https://doi.org/10.6073/pasta/67a558a24ceed9a0a5bf5e46ab841174. 
+
+
 
 # Data wrangling
 
@@ -84,10 +85,26 @@ stream_hc_complete <- hclust(euc_dist, method = 'complete')
 ```{r}
 ### Dendrogram plot
 ggdendrogram(stream_hc_complete, 
-             rotate = FALSE) +
-  theme_minimal() +
-  labs(x = "Site")
-
+             rotate = FALSE,
+             labels = TRUE) +
+  theme_classic() +
+  labs(x = "Stream site",
+       y = "Height") +
+  scale_y_continuous(breaks = seq(0, 7, by = 1),
+                     expand = c(0, 0), limits = c(0, 7)) +
+  theme(
+    ## x axis
+    axis.line.x = element_blank(),
+    axis.text.x = element_text(face = 'bold', size = 9.5),
+    axis.title.x = element_text(face = 'bold', vjust = -1),
+    axis.ticks.x = element_blank(),
+    ## y axis
+    axis.title.y = element_text(face = 'bold', vjust = 2),
+    axis.text.y = element_text(face = 'bold', size = 9.5),
+    axis.ticks.length.y = unit(.25, 'cm'),
+    axis.line.y = element_line(linewidth = .6),
+    axis.ticks.y = element_line(linewidth = .6))
+plot(stream_hc_complete)
 ```
 **Figure 1.** Dendrogram caption here.
 
