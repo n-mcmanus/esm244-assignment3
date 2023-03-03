@@ -17,19 +17,15 @@ library(tidyverse) ## always
 library(ggfortify) ## For PCA biplot
 ```
 
-# Introduction:
+# Introduction
 
-In this task, we explore patterns within a multivariate food nutrition dataset using a principal component analysis (PCA). Nutrition data comes from the United States Department of Agriulture (USDA) and is organized into 25 food group categories, such as snacks, baby foods, beef products, etc. Variables for each food product include both macronutrients (i.e. fats, protein, carbohydrates) and micronutrients (i.e. vitamins and minerals). Looking at the concentration of vitamins and minerals in raw vegetables and fruits. 
-
-
-Look at how they compare against snacks? 
+In this task, we explore patterns within a multivariate food nutrition dataset using a principal component analysis (PCA). Nutrition data comes from the United States Department of Agriulture (USDA) National Nutrient Database and is organized into 25 food group categories, such as snacks, baby foods, beef products, etc. Variables for each food product include both macronutrients (i.e. fats, protein, carbohydrates) and micronutrients (i.e. vitamins and minerals). A PCA is first performed on the macronutrients of raw fruits and vegetables. This is then compared against a PCA conducted on all the nutrient information for raw fruits and vegetables.
 
 **Source:** https://fdc.nal.usda.gov/index.html
 
+# Read in and wrangle data
 
-# Read in and wrangle data:
-
-The raw USDA nutrient data will be wrangled to return only information on the vitamins and minerals concentrations for raw fruits and vegetables.
+The raw USDA nutrient data will be wrangled to return only information on raw fruits and vegetables. Then, two data subsets are created; the first contains only the macronutrient information, while the second includes both macro and micronutrients.
 ```{r}
 ### read in data
 usda <- read_csv('usda_nutrients.csv') %>% 
@@ -38,70 +34,49 @@ usda <- read_csv('usda_nutrients.csv') %>%
 ### explore the food group categories (type and number)
 # unique(usda$food_group)
 
-usda_types <- usda %>%
-  group_by(food_group) %>%
-  summarize(count = n())
+# usda_types <- usda %>%
+#   group_by(food_group) %>%
+#   summarize(count = n())
 ```
 
 ```{r}
 ### create subset w/only raw veggies and fruits (no juice) 
-### and info on vitamins and minerals
-
-
-fruit_veg_micro <- usda %>% 
+fruit_veg <- usda %>% 
   ## only keep fruits and veggies
   filter(food_group %in% c("Vegetables and Vegetable Products",
                            "Fruits and Fruit Juices"),
          ## only keep raw, whole foods (no juice)
          str_detect(descrip, "raw"),
-         !str_detect(descrip, "juice")) %>% 
-  ## remove macronutrients and RDA ratios
-  select(!ends_with(c("usrda", "_g", "_kcal"))) %>% 
-  ## make food groups factors for later biplot
-  mutate(food_group = factor(food_group, 
-                             levels = c('Vegetables and Vegetable Products', 
-                                        'Fruits and Fruit Juices'))) 
+         !str_detect(descrip, "juice"))
 
-fruit_veg_macro <- usda %>% 
-  ## only keep fruits and veggies
-  filter(food_group %in% c("Vegetables and Vegetable Products",
-                           "Fruits and Fruit Juices"),
-         ## only keep raw, whole foods (no juice)
-         str_detect(descrip, "raw"),
-         !str_detect(descrip, "juice")) %>% 
-  ## remove macronutrients and RDA ratios
+
+### Create subset with macronutrient info
+fruit_veg_macro <- fruit_veg %>% 
+  ## remove micronutrients and RDA ratios
   select(food_group, energy_kcal:fiber_g) %>%
   ## make food groups factors for later biplot
   mutate(food_group = factor(food_group, 
                              levels = c('Vegetables and Vegetable Products', 
                                         'Fruits and Fruit Juices')))
 
-fruit_veg_all <- usda %>% 
-  ## only keep fruits and veggies
-  filter(food_group %in% c("Vegetables and Vegetable Products",
-                           "Fruits and Fruit Juices"),
-         ## only keep raw, whole foods (no juice)
-         str_detect(descrip, "raw"),
-         !str_detect(descrip, "juice")) %>% 
-  ## remove macronutrients and RDA ratios
+
+### Create subset with all info (except RDA)
+fruit_veg_all <- fruit_veg %>% 
+  ## remove RDA ratios (redundant info)
   select(!ends_with(c("usrda"))) %>%
+  select(!"id") %>% 
   ## make food groups factors for later biplot
   mutate(food_group = factor(food_group, 
                              levels = c('Vegetables and Vegetable Products', 
                                         'Fruits and Fruit Juices')))
- 
 ```
 
 
 
-# Run PCA
-
+# Run PCAs
 ``` {r}
 ### Create subset with only numeric values, then run PCA.
 ### Different units, so scale variables
-fruit_veg_micro_pca <- fruit_veg_micro %>%
-  select(where(is.numeric)) %>% 
-  prcomp(scale = TRUE) 
 
 fruit_veg_macro_pca <- fruit_veg_macro %>%
   select(where(is.numeric)) %>% 
@@ -112,58 +87,77 @@ fruit_veg_all_pca <- fruit_veg_all %>%
   prcomp(scale = TRUE)
 
 ### See the loadings and summary info
-# veggies_pca$rotation
-# summary(veggies_pca)
+# fruit_veg_macro_pca$rotation
+# summary(fruit_veg_macro_pca)
 ```
 
 
 
-# Visualize PCA
+# Visualize PCAs
 
-Create a biplot to look at PCA results in two-dimensions.
+Two biplots are created to look at the PCA results in two-dimensions.
 ```{r}
+### Macro biplot
 autoplot(fruit_veg_macro_pca,
      	data = fruit_veg_macro,
      	loadings = TRUE,
      	colour = 'food_group',
+     	size = 1.8,
      	alpha = .6,
      	loadings.label = TRUE,
      	loadings.colour = "black",
      	loadings.label.colour = "black",
      	loadings.label.vjust = -0.5) +
+  ## dot colors and legend labels
   scale_colour_manual(values = c('seagreen3', 'mediumorchid1'), 
-                      labels = c('Vegetables', 'Fruit')) +
+                      labels = c('Vegetables', 'Fruits')) +
   theme_minimal() +
-   theme(
-    legend.position = c(.8, .8),
-    axis.title.x = element_text(vjust = -1)
-  ) +
-  ## change legend dot size
+  theme(
+     ## legend  
+     legend.position = c(.8, .8),
+     legend.title = element_text(face = 'bold', size = 10),
+     legend.box.background = element_rect(color = 'black', size = 0.5),
+     ## axes
+     axis.title.x = element_text(vjust = -1)) +
+  ## change legend dot size and title
   guides(colour = guide_legend(override.aes = list(size = 3), 
                                title = "Food Group:"))
- 
-
-
-autoplot(fruit_veg_micro_pca,
-     	data = fruit_veg_micro,
-     	loadings = TRUE,
-     	colour = 'food_group',
-     	loadings.label = TRUE,
-     	loadings.colour = "black",
-     	loadings.label.colour = "black",
-     	loadings.label.vjust = -0.5
-     	) +
-  theme_minimal()
-
-autoplot(fruit_veg_all_pca,
-     	data = fruit_veg_micro,
-     	loadings = TRUE,
-     	colour = 'food_group',
-     	loadings.label = TRUE,
-     	loadings.colour = "black",
-     	loadings.label.colour = "black",
-     	loadings.label.vjust = -0.5
-     	) +
-  theme_minimal() 
 ```
-**Figure 1.** Caption here. 
+**Figure 1.** PCA biplot for the variance in macronutrients of raw vegetables (green) and fruits (purple) as reported by the USDA. 
+
+```{r}
+### All info biplot
+autoplot(fruit_veg_all_pca,
+     	data = fruit_veg_all,
+     	loadings = TRUE,
+     	colour = 'food_group',
+     	size = 1.8,
+     	alpha = .6,
+     	loadings.label = TRUE,
+     	loadings.colour = "black",
+     	loadings.label.colour = "black",
+     	loadings.label.vjust = -0.5) +
+  ## dot colors and legend labels
+  scale_colour_manual(values = c('seagreen3', 'mediumorchid1'), 
+                      labels = c('Vegetables', 'Fruits')) +
+  theme_minimal() +
+  theme(
+     ## legend  
+     legend.position = c(.8, .8),
+     legend.title = element_text(face = 'bold', size = 10),
+     legend.box.background = element_rect(color = 'black', size = 0.5),
+     ## axes
+     axis.title.x = element_text(vjust = -1)) +
+  ## change legend dot size and title
+  guides(colour = guide_legend(override.aes = list(size = 3), 
+                               title = "Food Group:"))
+```
+**Figure 2.** PCA biplot of raw vegetable and fruit nutrition information. Points indicating vegetable information are displayed in green, while fruit data points are displayed in purple. 
+
+# Summary
+
+Vector arrow lengths correspond with the eigenvalues for nutrients variables and variance in a given principal component (PC) direction. The angle between arrows indicates correlation. When evaluating only the macronutrients, Figure 1 shows that the variance in food kCal and fiber are mostly explain by PC1, while variance in protein, fat, and sugar are mostly captured by PC2. Additionally, the amount of kCal and fiber in a fruit or vegetable are almost perfectly correlated. Unsurprisingly, the amount of fat and carbohydrates the item has are also correlated to the food's kCals. Protein and sugar as well as fat and sugar, however, are nearly 90$^\circ$ apart, indicating no correlation. Finally, Figure 1 indicates that, on average, raw fruits contain more sugar while raw vegetables contain protein.
+
+When a PCA evaluates these macronutrients as well as the amount of vitamins and minerals, these trends largely persist (Figure 2). This biplot provides further information, such as vegetables contain larger amounts of vitamins and minerals, and vitamin B12 is negatively correlated with sugar. In this new PCA analysis, PC1 largely explains variance in vitamins and minerals, while PC2 is more aligned with macronutrients. Overall, these PCs capture less of the explained variance than those in the first PCA. 
+
+
