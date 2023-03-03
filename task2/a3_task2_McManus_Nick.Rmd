@@ -2,7 +2,12 @@
 title: 'Task 2: Agglomerative Hierarchical Clustering'
 author: "Nick McManus"
 date: "2023-02-27"
-output: html_document
+output:
+  rmdformats::downcute:
+    code_folding: hide
+    self_contained: true
+    thumbnails: false
+    lightbox: true
 ---
 
 ```{r setup, include=TRUE, message = FALSE, warning = FALSE}
@@ -216,4 +221,4 @@ tangle <- untangle(dend_complete, dend_single, method = 'step1side') %>%
 * On average, the stream chemistry at Bell Canyon Creek (BC02) and Devereaux Creek (DV01) are the most dissimilar from the other 11 sample sites when clustering by either complete or single linkage. 
 * Figure 3 directly compares the single and complete linkage methods for agglomerative hierarchical clustering. Using single linkage, all sites are related more quickly (height < 5) than with complete linkage (height < 7). 
 * Refugio Creek (RG01) and Tecolote Creek (TO02) move the most when comparing the linkage methods.
-* Complete linkage results in more apparent clusters when cut at a height of 3. 
+* Complete linkage results in more apparent clusters between stream sites. 
