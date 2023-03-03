@@ -30,7 +30,22 @@ First, we read in the raw data and wrangle it to later perform an hierarchical c
 ### read in data
 stream_chem <- read_csv('sbc_lter_registered_stream_chemistry.csv') %>% 
   ## convert -999 values to NA
-  na_if(-999) 
+  na_if(-999) %>% 
+  ## add stream names
+  mutate(site_name = case_when(site_code == 'AB00' ~ 'Arroyo Burro',
+                               site_code == 'AT07' ~ 'Atascadero Creek',
+                               site_code == 'BC02' ~ 'Bell Canyon Creek',
+                               site_code == 'DV01' ~ 'Devereaux Creek',
+                               site_code == 'GV01' ~ 'Gaviota',
+                               site_code == 'HO00' ~ 'Arroyo Hondo',
+                               site_code == 'MC00' ~ 'Mission Creek (Montecito St)',
+                               site_code == 'MC06' ~ 'Mission Creek (Rocky Nook)',
+                               site_code == 'ON02' ~ 'San Onofre Creek',
+                               site_code == 'RG01' ~ 'Refugio Creek',
+                               site_code == 'RS02' ~ 'Rattlesnake Creek',
+                               site_code == 'SP02' ~ 'San Pedro Creek',
+                               site_code == 'TO02' ~ 'Tecolote Creek'), 
+         .after = site_code)
 
 
 ### explore the number of NAs by variable
@@ -49,7 +64,7 @@ stream_chem <- read_csv('sbc_lter_registered_stream_chemistry.csv') %>%
 stream_chem_avgs <- stream_chem %>% 
   select(!c(tpc_uM, tpn_uM, tpp_uM, tss_mgperLiter)) %>% 
   drop_na() %>% 
-  group_by(site_code) %>% 
+  group_by(site_name) %>% 
   summarize(nh4_mean = mean(nh4_uM, na.rm = TRUE),
             no3_mean = mean(no3_uM, na.rm = TRUE),
             po4_mean = mean(po4_uM, na.rm = TRUE),
@@ -63,8 +78,8 @@ stream_chem_scale <- stream_chem_avgs %>%
   select(where(is.numeric)) %>% 
   scale()
 
-### reassign rownames based on site
-rownames(stream_chem_scale) <- stream_chem_avgs$site_code
+### reassign rownames based on site name
+rownames(stream_chem_scale) <- stream_chem_avgs$site_name
 ```
 
 
@@ -85,33 +100,32 @@ stream_hc_complete <- hclust(euc_dist, method = 'complete')
 ```{r}
 ### Dendrogram plot
 ggdendrogram(stream_hc_complete, 
-             rotate = FALSE,
+             rotate = TRUE,
              labels = TRUE) +
   theme_classic() +
-  labs(x = "Stream site",
+  labs(x = "Sample site",
        y = "Height") +
   scale_y_continuous(breaks = seq(0, 7, by = 1),
                      expand = c(0, 0), limits = c(0, 7)) +
   theme(
     ## x axis
-    axis.line.x = element_blank(),
+    axis.line.x = element_line(linewidth = 0.8),
+    axis.ticks.x = element_line(linewidth = 0.8),
+    axis.ticks.length.x = unit(.25, 'cm'),
     axis.text.x = element_text(face = 'bold', size = 9.5),
-    axis.title.x = element_text(face = 'bold', vjust = -1),
-    axis.ticks.x = element_blank(),
+    axis.title.x = element_text(face = 'bold', size = 11, vjust = -1),
     ## y axis
-    axis.title.y = element_text(face = 'bold', vjust = 2),
-    axis.text.y = element_text(face = 'bold', size = 9.5),
-    axis.ticks.length.y = unit(.25, 'cm'),
-    axis.line.y = element_line(linewidth = .6),
-    axis.ticks.y = element_line(linewidth = .6))
-plot(stream_hc_complete)
+    axis.line.y = element_blank(),
+    axis.title.y = element_text(face = 'bold', size = 11, vjust = 3.5),
+    axis.text.y = element_text(face = 'bold', size = 9))
 ```
-**Figure 1.** Dendrogram caption here.
+
+**Figure 1.** Santa Barbara Coastal LTER stream chemistry hierarchical clustering by complete linkage. The x-axis of this dendrogram indicates how closely related the stream chemistry is by water sample sites, on average.  
 
 
 # Complete vs. Single Linkage
 
-Here we compare the hierarchical clustering results of complete vs. single linkages with a tanglegram. 
+Here we compare how hierarchical clustering results differ when using complete vs. single linkages. 
 ```{r}
 ### Single-linkage 
 stream_hc_single <- hclust(euc_dist, method= 'single')
@@ -119,9 +133,61 @@ stream_hc_single <- hclust(euc_dist, method= 'single')
 ### Quick base plot check:
 # plot(hc_single, cex = 0.9, hang = -1)
 
-### Convert both HC's to dendrogram class
-dend_complete <- as.dendrogram(stream_hc_complete)
-dend_single <- as.dendrogram(stream_hc_single)
+### Dendrogram plot
+ggdendrogram(stream_hc_single, 
+             rotate = TRUE,
+             labels = TRUE) +
+  theme_classic() +
+  labs(x = "Sample site",
+       y = "Height") +
+  scale_y_continuous(breaks = seq(0, 5, by = 1),
+                     expand = c(0, 0), limits = c(0, 5)) +
+  theme(
+    ## x axis
+    axis.line.x = element_line(linewidth = 0.8),
+    axis.ticks.x = element_line(linewidth = 0.8),
+    axis.ticks.length.x = unit(.25, 'cm'),
+    axis.text.x = element_text(face = 'bold', size = 9.5),
+    axis.title.x = element_text(face = 'bold', size = 11, vjust = -1),
+    ## y axis
+    axis.line.y = element_blank(),
+    axis.title.y = element_text(face = 'bold', size = 11, vjust = 3.5),
+    axis.text.y = element_text(face = 'bold', size = 9))
+```
+
+**Figure 2.**  Santa Barbara Coastal LTER stream chemistry hierarchical clustering by single linkage. 
+
+```{r}
+### Let's make a tanglegram to directly compare!
+
+### First let's convert names to codes 
+### so that they're visible in figure ------------------------------------------
+stream_chem_avgs_code <- stream_chem %>% 
+  select(!c(tpc_uM, tpn_uM, tpp_uM, tss_mgperLiter)) %>% 
+  drop_na() %>% 
+  group_by(site_code) %>% 
+  summarize(nh4_mean = mean(nh4_uM, na.rm = TRUE),
+            no3_mean = mean(no3_uM, na.rm = TRUE),
+            po4_mean = mean(po4_uM, na.rm = TRUE),
+            tdn_mean = mean(tdn_uM, na.rm = TRUE),
+            tdp_mean = mean(tdp_uM, na.rm = TRUE),
+            spec_cond_mean = mean(spec_cond_uSpercm, na.rm = TRUE))
+## scale the numeric data
+stream_chem_scale_code <- stream_chem_avgs_code %>% 
+  select(where(is.numeric)) %>% 
+  scale()
+## reassign rownames based on site name
+rownames(stream_chem_scale_code) <- stream_chem_avgs_code$site_code
+## calculate euc dists
+euc_dist_code <- dist(stream_chem_scale_code, method = 'euclidean')
+## find complete and single linkages
+stream_hc_complete_code <- hclust(euc_dist_code, method = 'complete')
+stream_hc_single_code <- hclust(euc_dist_code, method = 'single')
+
+
+### Convert both HC's to dendrogram class --------------------------------------
+dend_complete <- as.dendrogram(stream_hc_complete_code)
+dend_single <- as.dendrogram(stream_hc_single_code)
 
 ### Make a tanglegram
 # tanglegram(dend_complete, dend_single)
@@ -137,9 +203,17 @@ dend_single <- as.dendrogram(stream_hc_single)
 
 ### Plot the untangled tanglegram!
 tangle <- untangle(dend_complete, dend_single, method = 'step1side') %>% 
-  tanglegram(common_subtrees_color_branches = TRUE)
+  tanglegram(common_subtrees_color_branches = TRUE,
+             main_left = "Complete", 
+             main_right = "Single",
+             cex_main = 1.7,
+             lwd = 2.5, edge.lwd = 2)
 ```
-**Figure 2.** Ugly tangle gram with caption here. 
+
+**Figure 3.** Tanglegram comparing the complete (left) vs single (right) linkage methods for hierarchical clustering of Santa Barbara Coastal LTER stream chemistry sites.
 
 
-
+* On average, the stream chemistry at Bell Canyon Creek (BC02) and Devereaux Creek (DV01) are the most dissimilar from the other 11 sample sites when clustering by either complete or single linkage. 
+* Figure 3 directly compares the single and complete linkage methods for agglomerative hierarchical clustering. Using single linkage, all sites are related more quickly (height < 5) than with complete linkage (height < 7). 
+* Refugio Creek (RG01) and Tecolote Creek (TO02) move the most when comparing the linkage methods.
+* Complete linkage results in more apparent clusters when cut at a height of 3. 
